@@ -89,11 +89,11 @@ class Controller(vkt.Controller):
     parametrization = Parametrization
 
     def download(self, params, **kwargs):
-        from .run_worker import execute
-        execute()
-        return vkt.DownloadResult(file_content="")
+        from run_worker import execute
+        output_file = execute()
+        return vkt.DownloadResult(output_file, 'output.json')
 
-    @vkt.WebView("Chat")
+    @vkt.WebView("Chat", duration_guess=4)
     def chat_interface(self, params, **kwargs):
         
         process_query(params.question)

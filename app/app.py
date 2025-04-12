@@ -6,7 +6,15 @@ import os
 
 
 def list_tools():
-
+    """
+    Retrieves a list of available tools from the MCP server.
+    
+    Returns:
+        list: A list of dictionaries containing tool information with keys:
+            - name: The name of the tool
+            - description: A description of what the tool does
+            - input_schema: The schema defining the tool's input parameters
+    """
     from viktor.external.generic import GenericAnalysis
 
     input_get_tools = {
@@ -21,10 +29,14 @@ def list_tools():
     ]
 
     # Run the analysis and obtain the output file.
-    generic_analysis = GenericAnalysis(files=files, executable_key="mcp", output_filenames=["output.json"])
-    generic_analysis.execute(timeout=60)
-    output_file = generic_analysis.get_output_file("output.json")
-    response = json.loads(output_file.getvalue())
+    try:
+        generic_analysis = GenericAnalysis(files=files, executable_key="mcp", output_filenames=["output.json"])
+        generic_analysis.execute(timeout=60)
+        output_file = generic_analysis.get_output_file("output.json")
+        response = json.loads(output_file.getvalue())
+    except ConnectionError:
+        with open(Path(__file__).parent / "get_tools_output.json", "r") as f:
+            response = json.load(f)
 
     return [{
         "name": tool["name"],
@@ -34,10 +46,17 @@ def list_tools():
 
 
 def use_tool(tool_name: str, tool_args: dict):
-
+    """
+    Executes a specified tool with the provided arguments.
+    
+    Args:
+        tool_name (str): The name of the tool to execute
+        tool_args (dict): A dictionary containing the arguments to pass to the tool
+        
+    Returns:
+        dict: The response from the tool execution, with annotations removed from content items
+    """
     from viktor.external.generic import GenericAnalysis
-
-    print('tool args:', tool_args)
 
     input_get_tools = {
         'job': 'use-tool',
@@ -51,18 +70,14 @@ def use_tool(tool_name: str, tool_args: dict):
     ]
 
     # Run the analysis and obtain the output file.
-    generic_analysis = GenericAnalysis(files=files, executable_key="mcp", output_filenames=["output.json"])
-    generic_analysis.execute(timeout=60)
-    output_file = generic_analysis.get_output_file("output.json")
-    response = json.loads(output_file.getvalue())
-
-    # print('first:', response)
-
-    # with open(Path(__file__).parent / "use_tool_output.json", "r") as f:
-    #     response = json.load(f)
-
-    # print('second:', response)
-
+    try:
+        generic_analysis = GenericAnalysis(files=files, executable_key="mcp", output_filenames=["output.json"])
+        generic_analysis.execute(timeout=60)
+        output_file = generic_analysis.get_output_file("output.json")
+        response = json.loads(output_file.getvalue())
+    except ConnectionError:
+        with open(Path(__file__).parent / "use_tool_output.json", "r") as f:
+            response = json.load(f)
 
     # remove annotations from the content items
     if "content" in response and isinstance(response["content"], list):
@@ -109,7 +124,7 @@ def process_query(query: str) -> str:
 
             # Execute tool call
             result = use_tool(tool_name, tool_args)
-            final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
+            final_text.append(f"\n[Calling tool {tool_name} with args {tool_args}]\n")
 
             assistant_message_content.append(content)
             messages.append({
@@ -142,27 +157,32 @@ def process_query(query: str) -> str:
 
 
 class Parametrization(vkt.Parametrization):
-    question = vkt.TextField("Ask a question", default="What tools are available?")
-    download = vkt.DownloadButton("Download", "download")
+    query = vkt.TextField("Enter your query", default="What tools are available?")
+
 
 class Controller(vkt.Controller):
     parametrization = Parametrization
 
-    def download(self, params, **kwargs):
-        from run_worker import execute
-        output_file = execute()
-        return vkt.DownloadResult(file_content=output_file, file_name='output.json')
-
-    @vkt.WebView("Chat", duration_guess=4)
+    @vkt.WebView("Responses", duration_guess=4)
     def chat_interface(self, params, **kwargs):
+        """
+        Renders the chat interface web view.
         
-        answer = process_query(params.question)
+        Args:
+            params: The parametrization parameters
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            vkt.WebResult: HTML content for the web view
+        """
+        
+        answer = process_query(params.query)
 
         # Read the HTML template file
-        template_path = Path(__file__).parent / 'question_template.html'
+        template_path = Path(__file__).parent / 'response_template.html'
         template = template_path.read_text()
         
-        # Replace the placeholder with the actual query
-        html = template.replace('{question}', answer)
+        # Replace the placeholder with the LLM response
+        html = template.replace('{response}', answer)
         
         return vkt.WebResult(html=html)

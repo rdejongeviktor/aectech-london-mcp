@@ -4,7 +4,7 @@ import json
 
 
 class Parametrization(vkt.Parametrization):
-    query = vkt.TextField("Ask a question")
+    question = vkt.TextField("Ask a question")
 
 class Controller(vkt.Controller):
     parametrization = Parametrization
@@ -20,7 +20,7 @@ class Controller(vkt.Controller):
         )
         get_tools_analysis.execute()
         tools = get_tools_analysis.get_output_file("output.json", as_file=True)
-            
+
         # 
 
 
@@ -29,7 +29,7 @@ class Controller(vkt.Controller):
         template = template_path.read_text()
         
         # Replace the placeholder with the actual query
-        query_value = params.query if params.query else "No question asked yet."
-        html = template.replace('{query}', query_value)
+        question_value = params.query if params.question else "No question asked yet."
+        html = template.replace('{question}', question_value)
         
         return vkt.WebResult(html=html)

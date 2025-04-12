@@ -1,0 +1,5 @@
+{
+    "job": "use-tool",
+    "tool_name": "get_alerts",
+    "tool_args": {"state": "CA"}
+}

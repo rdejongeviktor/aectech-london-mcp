@@ -6,8 +6,26 @@ import os
 
 
 def list_tools():
-    with open(Path(__file__).parent / "get_tools_output.json", "r") as f:
-        response = json.load(f)
+
+    from viktor.external.generic import GenericAnalysis
+
+    input_get_tools = {
+        'job': 'get-tools',
+        'tool_name': None,
+        'tool-args': None,
+    }
+
+    # Generate the input file(s)
+    files = [
+        ('input.json', vkt.File.from_data(json.dumps(input_get_tools))),
+    ]
+
+    # Run the analysis and obtain the output file.
+    generic_analysis = GenericAnalysis(files=files, executable_key="mcp", output_filenames=["output.json"])
+    generic_analysis.execute(timeout=60)
+    output_file = generic_analysis.get_output_file("output.json")
+    response = json.loads(output_file.getvalue())
+
     return [{
         "name": tool["name"],
         "description": tool["description"],
@@ -16,8 +34,35 @@ def list_tools():
 
 
 def use_tool(tool_name: str, tool_args: dict):
-    with open(Path(__file__).parent / "use_tool_output.json", "r") as f:
-        response = json.load(f)
+
+    from viktor.external.generic import GenericAnalysis
+
+    print('tool args:', tool_args)
+
+    input_get_tools = {
+        'job': 'use-tool',
+        'tool_name': tool_name,
+        'tool_args': tool_args,
+    }
+
+    # Generate the input file(s)
+    files = [
+        ('input.json', vkt.File.from_data(json.dumps(input_get_tools))),
+    ]
+
+    # Run the analysis and obtain the output file.
+    generic_analysis = GenericAnalysis(files=files, executable_key="mcp", output_filenames=["output.json"])
+    generic_analysis.execute(timeout=60)
+    output_file = generic_analysis.get_output_file("output.json")
+    response = json.loads(output_file.getvalue())
+
+    # print('first:', response)
+
+    # with open(Path(__file__).parent / "use_tool_output.json", "r") as f:
+    #     response = json.load(f)
+
+    # print('second:', response)
+
 
     # remove annotations from the content items
     if "content" in response and isinstance(response["content"], list):
@@ -106,7 +151,7 @@ class Controller(vkt.Controller):
     def download(self, params, **kwargs):
         from run_worker import execute
         output_file = execute()
-        return vkt.DownloadResult(output_file, 'output.json')
+        return vkt.DownloadResult(file_content=output_file, file_name='output.json')
 
     @vkt.WebView("Chat", duration_guess=4)
     def chat_interface(self, params, **kwargs):

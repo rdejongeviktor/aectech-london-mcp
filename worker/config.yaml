@@ -1,0 +1,17 @@
+# CONFIGURATION FILE FOR VIKTOR WORKER TO RUN GENERIC EXECUTABLE / SCRIPT
+#
+# > Required keys: executables (dictionary with name of executable as key containing key-value pairs for path, arguments and working directory) and maxParallelProcesses
+# > The key of executable is used to distinguish between different jobs that can be transferred to the worker
+# > Use either double quotes: "example", or single quotes: 'example'
+# > Double quotes require special characters to be escaped, whereas single quotes can be used for raw strings
+# > Trailing slashes are not required in paths
+# > If you do not want to call an executable set executables to: {}
+# > If the executable does not take any additional arguments specify arguments as an empty sequence: []
+executables:
+  mcp:
+    path: 'C:\path\to\python.exe'
+    arguments:
+    - 'client.py'
+    - 'weather_mcp.py'
+    workingDirectoryPath: 'C:\path\to\wd'  # or 'C:\path\to\working\directory' if a specific path is desired
+maxParallelProcesses: 1 # must be 1 if any of the above workingDirectoryPath is not '' (stateful path)

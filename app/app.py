@@ -178,24 +178,28 @@ class MyText(vkt.Text):
 def value_func(params):
     return params.model.answer
 
-class Parametrization(vkt.Parametrization):
-    
-    # todo: add intro
-    # todo: add 'show_model'
-
+class Parametrization(vkt.Parametrization):   
     model = vkt.Step('GModel', views=['show_model'])
-    model.query = vkt.TextField("Enter your query", default="What tools are available?", flex=50)
+    model.intro = vkt.Text("# Building Analysis Application\nThis application helps you analyze buildings using MCP (Model Context Protocol) tools, location-based analysis, and generate comprehensive reports.")
+    model.text = vkt.Text("This step allows you to interact with Rhino through an MCP.")
+    model.query = vkt.TextAreaField("Enter your query", default="What tools are available?", flex=50)
     model.ask = vkt.SetParamsButton('Ask', 'ask', flex=10)
     model.answer = vkt.HiddenField('j')
     model.answer_title = vkt.Text("**Last answer:**")
     model.anwerblock = MyText(value_func)
 
     analysis = vkt.Step('Analysis', views=['show_map', 'analysis_result'])
+    analysis.text = vkt.Text("In this step, you can specify a location for your building analysis. The system will analyze environmental factors and building performance at the selected location.")
     analysis.location = vkt.GeoPointField('Location', default=vkt.GeoPoint(lat=51.4834, lon=-0.0106))
+    analysis.location_help = vkt.Text("Select a location by clicking on the map or entering coordinates. The default location is set to London, UK. The analysis will consider local environmental factors such as wind patterns and sunlight exposure.")
 
     report = vkt.Step('Report', views=['create_report'])
+    report.text = vkt.Text("Generate a comprehensive building analysis report with customized information. The report includes environmental analysis, specifications, and recommendations.")
+    report.building_name_help = vkt.Text("Enter the name of the building for which you're generating the report. This will appear in the report header and throughout the document.")
     report.building_name = vkt.TextField("Building name", default="Modern")
+    report.customer_name_help = vkt.Text("Enter the name of the client or organization for whom this report is being prepared. This will be displayed in the 'Prepared for' section of the report.")
     report.customer_name = vkt.TextField('Customer name', default='Acme')
+    report.generate_info = vkt.Text("Click on the 'Report' view to generate a detailed PDF report with the information provided. The report will include building specifications, environmental analysis with wind and sunlight data, and recommendations.")
 
 class Controller(vkt.Controller):
     parametrization = Parametrization
@@ -217,7 +221,7 @@ class Controller(vkt.Controller):
     
     @vkt.GeometryView('Analysis result', duration_guess=4)
     def analysis_result(self, params, **kwargs):
-        return vkt.GeometryResult(geometry=vkt.File.from_path(Path(__file__).parent / "towers.3dm"), geometry_type="3dm")
+        return vkt.GeometryResult(geometry=vkt.File.from_path(Path(__file__).parent / "analysis_mesh.3dm"), geometry_type="3dm")
     
     @vkt.PDFView("Report", duration_guess=10)
     def create_report(self, params, **kwargs):

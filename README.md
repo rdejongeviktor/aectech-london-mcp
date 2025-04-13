@@ -2,3 +2,8 @@
 
 - Slack: https://aectechevent.slack.com/archives/C08N0E5FF44
 - Miro: https://miro.com/welcomeonboard/S3hRZzhVTksvMWZ2RlhWTmtHNGZJQmxKd3BVK2hLYVVBS2RHT3dEdUx6OWZGUUtwWGRwRXA2cTVtQ1Z3ZktvK2g5ZlJvaFhZN0lqSE9JNDc2dUVNTUpaSEFMVHJxUnpZS1ROdDVGb0FnVjF5Vk1JMWlvamtCWmwyK0Q3WlNyVGZ3VHhHVHd5UWtSM1BidUtUYmxycDRnPT0hdjE=?share_link_id=565546994752
+
+
+## Attribution
+
+- Rhino MCP server: https://github.com/jingcheng-chen/rhinomcp

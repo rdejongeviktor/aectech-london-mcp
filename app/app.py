@@ -179,7 +179,7 @@ class Parametrization(vkt.Parametrization):
     # todo: add intro
     # todo: add 'show_model'
 
-    model = vkt.Step('GModel', views=['chat_interface'])
+    model = vkt.Step('GModel', views=['chat_interface', 'show_model'])
     model.query = vkt.TextField("Enter your query", default="What tools are available?", flex=50)
     model.ask = vkt.SetParamsButton('Ask', 'ask', flex=10)
     model.answer = vkt.HiddenField('j')
@@ -198,6 +198,11 @@ class Controller(vkt.Controller):
     def ask(self, params, **kwargs):
         answer = process_query(params.model.query)
         return vkt.SetParamsResult({'model':{'answer': answer}})
+
+    @vkt.IFCView('Model', duration_guess=4)
+    def show_model(self, params, **kwargs):
+        ifc = None  # TODO
+        return vkt.IFCResult(ifc)
 
     @vkt.WebView("Responses", duration_guess=4)
     def chat_interface(self, params, **kwargs):

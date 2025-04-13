@@ -11,7 +11,7 @@ executables:
   mcp:
     path: 'C:\path\to\python.exe'
     arguments:
-    - 'client.py'
-    - 'weather_mcp.py'
-    workingDirectoryPath: 'C:\path\to\wd'  # or 'C:\path\to\working\directory' if a specific path is desired
+    - '.\client.py'
+    - '.\rhino_mcp_server\main.py'
+    workingDirectoryPath: 'C:\path\to\worker\folder'  # or 'C:\path\to\working\directory' if a specific path is desired
 maxParallelProcesses: 1 # must be 1 if any of the above workingDirectoryPath is not '' (stateful path)

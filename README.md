@@ -7,3 +7,12 @@
 ## Attribution
 
 - Rhino MCP server: https://github.com/jingcheng-chen/rhinomcp
+
+## Setup worker and MCP
+- Make sure you have latest Rhino version
+- Install mcp plugin (see https://github.com/jingcheng-chen/rhinomcp)
+- Start plugin
+- Install generic worker and setup config.yml
+
+## Setup app
+- Needs `ANTHROPIC_API_KEY` environment variable

@@ -3,6 +3,10 @@ from pathlib import Path
 import json
 import anthropic
 import os
+from datetime import date
+import plotly.graph_objects as go
+import io
+from PIL import Image, ImageDraw, ImageFont
 
 
 def list_tools():
@@ -62,7 +66,7 @@ def use_tool(tool_name: str, tool_args: dict):
         'job': 'use-tool',
         'tool_name': tool_name,
         'tool_args': tool_args,
-    }
+    }   
 
     # Generate the input file(s)
     files = [
@@ -179,7 +183,7 @@ class Parametrization(vkt.Parametrization):
     # todo: add intro
     # todo: add 'show_model'
 
-    model = vkt.Step('GModel', views=['chat_interface', 'show_model'])
+    model = vkt.Step('GModel', views=['show_model'])
     model.query = vkt.TextField("Enter your query", default="What tools are available?", flex=50)
     model.ask = vkt.SetParamsButton('Ask', 'ask', flex=10)
     model.answer = vkt.HiddenField('j')
@@ -187,10 +191,11 @@ class Parametrization(vkt.Parametrization):
     model.anwerblock = MyText(value_func)
 
     analysis = vkt.Step('Analysis', views=['show_map'])
-    analysis.location = vkt.GeoPointField('Location')
+    analysis.location = vkt.GeoPointField('Location', default=vkt.GeoPoint(lat=51.4834, lon=-0.0106))
 
-    report = vkt.Step('Report', views=['report'])
-    report.Customer_name = vkt.TextField('Customer name', default='Acme')
+    report = vkt.Step('Report', views=['create_report'])
+    report.building_name = vkt.TextField("Building name", default="Modern")
+    report.customer_name = vkt.TextField('Customer name', default='Acme')
 
 class Controller(vkt.Controller):
     parametrization = Parametrization
@@ -204,39 +209,177 @@ class Controller(vkt.Controller):
         ifc = None  # TODO
         return vkt.IFCResult(ifc)
 
-    @vkt.WebView("Responses", duration_guess=4)
-    def chat_interface(self, params, **kwargs):
-        """
-        Renders the chat interface web view.
-        
-        Args:
-            params: The parametrization parameters
-            **kwargs: Additional keyword arguments
-            
-        Returns:
-            vkt.WebResult: HTML content for the web view
-        """
-        
-        answer = process_query(params.model.query)
-
-        # Read the HTML template file
-        template_path = Path(__file__).parent / 'response_template.html'
-        template = template_path.read_text()
-        
-        # Replace the placeholder with the LLM response
-        html = template.replace('{response}', answer)
-        
-        return vkt.WebResult(html=html)
-
     @vkt.MapView('Location')
     def show_map(self, params, **kwargs):
         features = []
         if params.analysis.location is not None:
             features.append(vkt.MapPoint.from_geo_point(params.analysis.location))
         return vkt.MapResult(features)
-
-    @vkt.PDFView('Report')
-    def report(self, params, **kwargs):
-        file_path = Path(__file__).parent / 'dummy.pdf'
-        return vkt.PDFResult.from_path(file_path)
     
+    @vkt.PDFView("Report", duration_guess=10)
+    def create_report(self, params, **kwargs):
+        building_name = params.report.building_name
+        customer_name = params.report.customer_name
+        today = date.today().strftime("%B %d, %Y")
+        
+        # Hard-coded parameters
+        location = "London, UK"
+        height = 120
+        floors = 35
+        building_type = "Office"
+        
+        wind_data = self.generate_wind_analysis()
+        sunlight_data = self.generate_sunlight_analysis()
+        
+        report_image = self.create_report_image(building_name, customer_name, location, height, floors, building_type, today, wind_data, sunlight_data)
+        pdf_file = self.image_to_pdf(report_image)
+        
+        return vkt.PDFResult(file=pdf_file)
+
+    def create_report_image(self, building_name, customer_name, location, height, floors, building_type, date, wind_data, sunlight_data):
+        img = Image.new('RGB', (2100, 2970), color='white')  # A4 size at 300 dpi
+        d = ImageDraw.Draw(img)
+        
+        font_small = ImageFont.load_default().font_variant(size=28)
+        font_medium = ImageFont.load_default().font_variant(size=36)
+        font_large = ImageFont.load_default().font_variant(size=48)
+        font_title = ImageFont.load_default().font_variant(size=60)
+
+        # Title and Logo
+        d.text((100, 100), "AEC Building Analysis Report", font=font_title, fill='black')
+        d.text((100, 180), f"{building_name}", font=font_large, fill='black')
+        d.text((100, 240), f"Prepared for: {customer_name}", font=font_medium, fill='black')
+        d.text((100, 300), f"Generated on: {date}", font=font_medium, fill='black')
+
+        # 1. Executive Summary
+        d.text((100, 400), "1. Executive Summary", font=font_large, fill='black')
+        summary_text = [
+            f"This report presents a comprehensive analysis of {building_name}, a {height}m tall",
+            f"{building_type.lower()} building located in {location}. With {floors} floors, this structure",
+            "has been evaluated for its environmental impact, energy efficiency, and overall",
+            "performance. Key findings and recommendations are outlined in the following sections.",
+            f"This analysis has been prepared exclusively for {customer_name} to assist in",
+            "decision-making processes related to the building's design and operation."
+        ]
+        for i, line in enumerate(summary_text):
+            d.text((100, 460 + i*40), line, font=font_small, fill='black')
+
+        # 2. Building Specifications
+        d.text((100, 720), "2. Building Specifications", font=font_large, fill='black')
+        specs = [
+            f"Name: {building_name}",
+            f"Location: {location}",
+            f"Type: {building_type}",
+            f"Height: {height} meters",
+            f"Number of Floors: {floors}",
+            f"Estimated Gross Floor Area: {floors * 1000} m²",
+            f"Estimated Occupancy: {floors * 50} people"
+        ]
+        for i, spec in enumerate(specs):
+            d.text((100, 780 + i*40), spec, font=font_small, fill='black')
+
+        # 3. Environmental Analysis
+        d.text((100, 1100), "3. Environmental Analysis", font=font_large, fill='black')
+        
+        # 3.1 Wind Analysis
+        d.text((100, 1160), "3.1 Wind Analysis", font=font_medium, fill='black')
+        wind_text = [
+            "The wind rose diagram below illustrates the prevailing wind directions and speeds",
+            "around the building. This analysis is crucial for understanding potential wind-related",
+            "effects on the building's structure, energy performance, and pedestrian comfort in",
+            "surrounding areas."
+        ]
+        for i, line in enumerate(wind_text):
+            d.text((100, 1210 + i*40), line, font=font_small, fill='black')
+        
+        wind_img = Image.open(io.BytesIO(wind_data))
+        img.paste(wind_img, (100, 1370))
+
+        # 3.2 Sunlight Analysis
+        d.text((100, 2020), "3.2 Sunlight Analysis", font=font_medium, fill='black')
+        sunlight_text = [
+            "The chart below shows the average daylight hours per month for the building's location.",
+            "This information is valuable for assessing natural lighting potential, energy efficiency",
+            "considerations, and the possible implementation of solar energy systems."
+        ]
+        for i, line in enumerate(sunlight_text):
+            d.text((100, 2070 + i*40), line, font=font_small, fill='black')
+        
+        sunlight_img = Image.open(io.BytesIO(sunlight_data))
+        img.paste(sunlight_img, (100, 2220))
+
+        # 4. Recommendations
+        d.text((100, 2770), "4. Recommendations", font=font_large, fill='black')
+        recommendations = [
+            "1. Implement wind deflection features on the building's facade to mitigate strong winds.",
+            "2. Optimize window placement and sizing to maximize natural light and reduce energy costs.",
+            "3. Consider installing solar panels on the roof to harness abundant sunlight.",
+            "4. Develop a green roof system to improve building insulation and reduce urban heat island effect.",
+            "5. Implement smart building systems to optimize energy usage based on occupancy and natural light."
+        ]
+        for i, rec in enumerate(recommendations):
+            d.text((100, 2830 + i*40), rec, font=font_small, fill='black')
+
+        return img
+
+    def image_to_pdf(self, image):
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format='PDF')
+        img_byte_arr.seek(0)
+        return vkt.File.from_data(img_byte_arr.getvalue())
+
+    def generate_wind_analysis(self):
+        wind_directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+        wind_speeds = [4, 3, 2, 4, 5, 3, 2, 1, 3, 4, 5, 3, 2, 3, 4, 2]
+
+        fig = go.Figure(go.Barpolar(
+            r=wind_speeds,
+            theta=wind_directions,
+            marker_color=vkt.Color(30, 144, 255).hex,
+            marker_line_color="black",
+            marker_line_width=1,
+            opacity=0.8
+        ))
+
+        fig.update_layout(
+            title="Wind Rose Diagram",
+            font_size=16,
+            polar=dict(
+                radialaxis=dict(range=[0, 6], showticklabels=False, ticks=''),
+                angularaxis=dict(showticklabels=True, ticks='')
+            ),
+            width=600,
+            height=600
+        )
+
+        img_bytes = io.BytesIO()
+        fig.write_image(img_bytes, format="png")
+        img_bytes.seek(0)
+        return img_bytes.getvalue()
+
+    def generate_sunlight_analysis(self):
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        daylight_hours = [9.5, 10.5, 12, 13.5, 15, 15.5, 15, 14, 12.5, 11, 10, 9]
+
+        fig = go.Figure(go.Bar(
+            x=months,
+            y=daylight_hours,
+            marker_color=vkt.Color(255, 165, 0).hex,
+            marker_line_color="black",
+            marker_line_width=1,
+            opacity=0.8
+        ))
+
+        fig.update_layout(
+            title="Average Daylight Hours per Month",
+            xaxis_title="Month",
+            yaxis_title="Daylight Hours",
+            font_size=16,
+            width=800,
+            height=500
+        )
+
+        img_bytes = io.BytesIO()
+        fig.write_image(img_bytes, format="png")
+        img_bytes.seek(0)
+        return img_bytes.getvalue()

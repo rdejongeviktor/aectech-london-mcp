@@ -1,2 +1,5 @@
 viktor==14.20.1
 anthropic
+pillow
+plotly
+kaleido

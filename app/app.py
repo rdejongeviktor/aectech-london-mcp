@@ -190,7 +190,7 @@ class Parametrization(vkt.Parametrization):
     model.answer_title = vkt.Text("**Last answer:**")
     model.anwerblock = MyText(value_func)
 
-    analysis = vkt.Step('Analysis', views=['show_map'])
+    analysis = vkt.Step('Analysis', views=['show_map', 'analysis_result'])
     analysis.location = vkt.GeoPointField('Location', default=vkt.GeoPoint(lat=51.4834, lon=-0.0106))
 
     report = vkt.Step('Report', views=['create_report'])
@@ -204,10 +204,9 @@ class Controller(vkt.Controller):
         answer = process_query(params.model.query)
         return vkt.SetParamsResult({'model':{'answer': answer}})
 
-    @vkt.IFCView('Model', duration_guess=4)
+    @vkt.GeometryView('Model', duration_guess=4)
     def show_model(self, params, **kwargs):
-        ifc = None  # TODO
-        return vkt.IFCResult(ifc)
+        return vkt.GeometryResult(geometry=vkt.File.from_path(Path(__file__).parent / "towers.3dm"), geometry_type="3dm")
 
     @vkt.MapView('Location')
     def show_map(self, params, **kwargs):
@@ -215,6 +214,10 @@ class Controller(vkt.Controller):
         if params.analysis.location is not None:
             features.append(vkt.MapPoint.from_geo_point(params.analysis.location))
         return vkt.MapResult(features)
+    
+    @vkt.GeometryView('Analysis result', duration_guess=4)
+    def analysis_result(self, params, **kwargs):
+        return vkt.GeometryResult(geometry=vkt.File.from_path(Path(__file__).parent / "towers.3dm"), geometry_type="3dm")
     
     @vkt.PDFView("Report", duration_guess=10)
     def create_report(self, params, **kwargs):

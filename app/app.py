@@ -172,22 +172,32 @@ class MyText(vkt.Text):
 
 
 def value_func(params):
-    return params.answer
+    return params.model.answer
 
 class Parametrization(vkt.Parametrization):
-    query = vkt.TextField("Enter your query", default="What tools are available?", flex=50)
-    ask = vkt.SetParamsButton('Ask', 'ask', flex=10)
-    answer = vkt.HiddenField('j')
-    answer_title = vkt.Text("**Last answer:**")
-    anwerblock = MyText(value_func)
+    
+    # todo: add intro
+    # todo: add 'show_model'
+
+    model = vkt.Step('GModel', views=['chat_interface'])
+    model.query = vkt.TextField("Enter your query", default="What tools are available?", flex=50)
+    model.ask = vkt.SetParamsButton('Ask', 'ask', flex=10)
+    model.answer = vkt.HiddenField('j')
+    model.answer_title = vkt.Text("**Last answer:**")
+    model.anwerblock = MyText(value_func)
+
+    analysis = vkt.Step('Analysis', views=['show_map'])
+    analysis.location = vkt.GeoPointField('Location')
+
+    report = vkt.Step('Report', views=['report'])
+    report.Customer_name = vkt.TextField('Customer name', default='Acme')
 
 class Controller(vkt.Controller):
     parametrization = Parametrization
 
-
     def ask(self, params, **kwargs):
-        answer = process_query(params.query)
-        return vkt.SetParamsResult({'answer': answer})
+        answer = process_query(params.model.query)
+        return vkt.SetParamsResult({'model':{'answer': answer}})
 
     @vkt.WebView("Responses", duration_guess=4)
     def chat_interface(self, params, **kwargs):
@@ -202,7 +212,7 @@ class Controller(vkt.Controller):
             vkt.WebResult: HTML content for the web view
         """
         
-        answer = process_query(params.query)
+        answer = process_query(params.model.query)
 
         # Read the HTML template file
         template_path = Path(__file__).parent / 'response_template.html'
@@ -212,3 +222,16 @@ class Controller(vkt.Controller):
         html = template.replace('{response}', answer)
         
         return vkt.WebResult(html=html)
+
+    @vkt.MapView('Location')
+    def show_map(self, params, **kwargs):
+        features = []
+        if params.analysis.location is not None:
+            features.append(vkt.MapPoint.from_geo_point(params.analysis.location))
+        return vkt.MapResult(features)
+
+    @vkt.PDFView('Report')
+    def report(self, params, **kwargs):
+        file_path = Path(__file__).parent / 'dummy.pdf'
+        return vkt.PDFResult.from_path(file_path)
+    

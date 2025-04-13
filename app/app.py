@@ -155,13 +155,39 @@ def process_query(query: str) -> str:
     return "\n".join(final_text)
 
 
+class MyText(vkt.Text):
+
+    def __init__(self, value_func, *, visible = True, flex = 100):
+        self._value_func = value_func
+        super().__init__('', visible=visible, flex=flex)
+
+    def _generate(self, *args, **kwargs):
+        res = super()._generate(*args, **kwargs)
+        # print(res['parametrization'].keys())
+
+        params = args[1]
+        res['parametrization']['value'] = self._value_func(params)
+
+        return res
+
+
+def value_func(params):
+    return params.answer
 
 class Parametrization(vkt.Parametrization):
-    query = vkt.TextField("Enter your query", default="What tools are available?")
-
+    query = vkt.TextField("Enter your query", default="What tools are available?", flex=50)
+    ask = vkt.SetParamsButton('Ask', 'ask', flex=10)
+    answer = vkt.HiddenField('j')
+    answer_title = vkt.Text("**Last answer:**")
+    anwerblock = MyText(value_func)
 
 class Controller(vkt.Controller):
     parametrization = Parametrization
+
+
+    def ask(self, params, **kwargs):
+        answer = process_query(params.query)
+        return vkt.SetParamsResult({'answer': answer})
 
     @vkt.WebView("Responses", duration_guess=4)
     def chat_interface(self, params, **kwargs):
